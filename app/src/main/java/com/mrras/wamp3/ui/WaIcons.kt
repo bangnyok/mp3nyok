@@ -77,10 +77,10 @@ object WaIcons {
         strokeLineCap = StrokeCap.Round, strokeLineJoin = StrokeJoin.Round
     ) {
         moveTo(5f, 11.5f); lineTo(5f, 10f)
-        cubicTo(5f, 7.2f, 7.2f, 5f, 10f, 5f)
+        curveTo(5f, 7.2f, 7.2f, 5f, 10f, 5f)
         lineTo(16f, 5f)
         moveTo(19f, 12.5f); lineTo(19f, 14f)
-        cubicTo(19f, 16.8f, 16.8f, 19f, 14f, 19f)
+        curveTo(19f, 16.8f, 16.8f, 19f, 14f, 19f)
         lineTo(8f, 19f)
     }.path(fill = ink) {
         moveTo(15f, 2.6f); lineTo(18.4f, 5f); lineTo(15f, 7.4f); close()
