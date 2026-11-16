@@ -1,4 +1,4 @@
-package com.mrras.wamp3.ui
+package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -23,10 +23,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.data.Track
-import com.mrras.wamp3.download.DLEngine
-import com.mrras.wamp3.player.PlayerHolder
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.data.Track
+import com.bangnyok.mp3nyok.download.DLEngine
+import com.bangnyok.mp3nyok.player.PlayerHolder
 
 @Composable
 fun PlaylistWindow(
@@ -48,7 +48,7 @@ fun PlaylistWindow(
     var selected by remember(playlist?.id) { mutableStateOf<Int?>(null) }
 
     Column(modifier = modifier) {
-        TitleBar("WAMP3 PLAYLIST  —  ${playlist?.name ?: "-"}")
+        TitleBar("MP3NYOK PLAYLIST  —  ${playlist?.name ?: "-"}")
 
         LazyColumn(
             Modifier

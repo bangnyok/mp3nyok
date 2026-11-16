@@ -15,11 +15,11 @@ if (keystorePropsFile.exists()) {
 }
 
 android {
-    namespace = "com.mrras.wamp3"
+    namespace = "com.bangnyok.mp3nyok"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.mrras.wamp3"
+        applicationId = "com.bangnyok.mp3nyok"
         minSdk = 24
         targetSdk = 35
         // versionName ikut git tag (v1.2.3 -> "1.2.3"); versionCode naik ikut CI run

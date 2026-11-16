@@ -1,4 +1,4 @@
-package com.mrras.wamp3.ui
+package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -26,10 +26,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mrras.wamp3.Wamp3App
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.download.DLEngine
-import com.mrras.wamp3.update.Updater
+import com.bangnyok.mp3nyok.Mp3NyokApp
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.download.DLEngine
+import com.bangnyok.mp3nyok.update.Updater
 
 private sealed interface DialogKind {
     data object AddUrl : DialogKind
@@ -80,7 +80,7 @@ fun MainScreen() {
 private fun StatusBar(onClick: () -> Unit) {
     val folder by Store.musicFolder.collectAsState()
     val jobs by DLEngine.active.collectAsState()
-    val ready by Wamp3App.ytdlReady.collectAsState()
+    val ready by Mp3NyokApp.ytdlReady.collectAsState()
 
     val running = jobs.values.filter {
         it.state == DLEngine.State.QUEUED || it.state == DLEngine.State.RUNNING

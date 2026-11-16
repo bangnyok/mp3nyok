@@ -1,4 +1,4 @@
-package com.mrras.wamp3.ui
+package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -83,10 +83,19 @@ fun WaButton(
     text: String,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    active: Boolean = false,
     onClick: () -> Unit
 ) {
-    val bg = if (enabled) Wa.Panel else Color(0xFF242424)
-    val fg = if (enabled) Wa.Text else Color(0xFF666666)
+    val bg = when {
+        active -> Color(0xFF3A2A00)
+        enabled -> Wa.Panel
+        else -> Color(0xFF242424)
+    }
+    val fg = when {
+        active -> Wa.Orange
+        enabled -> Wa.Text
+        else -> Color(0xFF666666)
+    }
     Box(
         modifier
             .border(1.dp, if (enabled) Wa.Border else Color(0xFF333333))

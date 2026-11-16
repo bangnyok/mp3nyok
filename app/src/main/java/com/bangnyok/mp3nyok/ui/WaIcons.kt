@@ -1,4 +1,4 @@
-package com.mrras.wamp3.ui
+package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor

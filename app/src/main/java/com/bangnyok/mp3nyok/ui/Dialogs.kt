@@ -1,4 +1,4 @@
-package com.mrras.wamp3.ui
+package com.bangnyok.mp3nyok.ui
 
 import android.content.Intent
 import android.net.Uri
@@ -49,12 +49,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mrras.wamp3.BuildConfig
-import com.mrras.wamp3.Wamp3App
-import com.mrras.wamp3.data.NewTrack
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.download.DLEngine
-import com.mrras.wamp3.update.Updater
+import com.bangnyok.mp3nyok.BuildConfig
+import com.bangnyok.mp3nyok.Mp3NyokApp
+import com.bangnyok.mp3nyok.data.NewTrack
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.download.DLEngine
+import com.bangnyok.mp3nyok.update.Updater
 import kotlinx.coroutines.launch
 
 // ------------------------------------------------------------------
@@ -67,7 +67,8 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
     val ctx = LocalContext.current
     val clipboard = LocalClipboardManager.current
-    val ready by Wamp3App.ytdlReady.collectAsState()
+    val ready by Mp3NyokApp.ytdlReady.collectAsState()
+    val playlists by Store.playlists.collectAsState()
     var url by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -75,6 +76,16 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
     var entries by remember { mutableStateOf<List<DLEngine.UrlEntry>>(emptyList()) }
     val checked = remember { mutableStateMapOf<String, Boolean>() }
     val names = remember { mutableStateMapOf<String, String>() }
+    // APPEND (masuk hujung) atau GANTI (kosongkan list itu dulu, tanpa padam list lain)
+    var mode by remember { mutableStateOf("APPEND") }
+    var gantiAsk by remember { mutableStateOf(false) }
+    var saveAsName by remember { mutableStateOf("") }
+    var keepOld by remember { mutableStateOf(true) }
+
+    // Playlist sedia ada yang nama sama (untuk pilihan APPEND/GANTI)
+    val existing = playlists.firstOrNull {
+        it.name.equals(plName.trim(), ignoreCase = true) && plName.isNotBlank()
+    }
 
     WaDialog(title = "ADD URL — YOUTUBE / YT MUSIC", onDismiss = onDismiss) {
         Text(
@@ -160,6 +171,33 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(4.dp))
+            // Playlist nama sama sudah wujud? Tanya APPEND atau GANTI
+            if (existing != null) {
+                Text(
+                    "Playlist \"${existing.name}\" sudah ada (${existing.trackIds.size} tracks):",
+                    color = Wa.Orange, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+                )
+                Spacer(Modifier.height(2.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    WaButton(
+                        "APPEND",
+                        Modifier.weight(1f),
+                        active = mode == "APPEND"
+                    ) { mode = "APPEND" }
+                    WaButton(
+                        "GANTI",
+                        Modifier.weight(1f),
+                        active = mode == "GANTI"
+                    ) { mode = "GANTI" }
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (mode == "APPEND") "Tracks baru dicampur ke hujung list itu."
+                    else "List itu dikosongkan dulu (list lain tidak disentuh).",
+                    color = Wa.TextDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace
+                )
+                Spacer(Modifier.height(2.dp))
+            }
             Text(
                 "${checked.count { it.value }} / ${entries.size} dipilih — edit nama fail:",
                 color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
@@ -216,29 +254,122 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                     enabled = checked.any { it.value }
                 ) {
                     val sel = entries.filter { checked[it.id] ?: true }
+                    val mapped = sel.map { NewTrack(it.title, it.watchUrl, it.id, it.durationSec) }
                     val targetName = plName.ifBlank { "Playlist" }
-                    Store.addTracks(targetName, sel.map { NewTrack(it.title, it.watchUrl, it.id, it.durationSec) })
-                    Toast.makeText(
-                        ctx,
-                        "${sel.size} listing ditambah ke \"$targetName\"",
-                        Toast.LENGTH_SHORT
-                    ).show()
-                    onDismiss()
+                    if (mode == "GANTI" && existing != null && existing.trackIds.isNotEmpty()) {
+                        // List itu ada isi — tanya dulu: simpan salinan senarai lama?
+                        saveAsName = "${existing.name} lama"
+                        keepOld = true
+                        gantiAsk = true
+                    } else if (mode == "GANTI" && existing != null) {
+                        Store.replacePlaylistTracks(existing.id, mapped)
+                        Toast.makeText(
+                            ctx,
+                            "\"${existing.name}\" diganti — ${sel.size} listing",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onDismiss()
+                    } else {
+                        Store.addTracks(targetName, mapped)
+                        Toast.makeText(
+                            ctx,
+                            "${sel.size} listing ditambah ke \"$targetName\"",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        onDismiss()
+                    }
                 }
                 WaButton("CANCEL", Modifier.weight(1f), onClick = onDismiss)
             }
         }
     }
+
+    // Sub-dialog: GANTI list yang ada isi — simpan salinan dulu?
+    if (gantiAsk) {
+        val ex = existing
+        AlertDialog(
+            onDismissRequest = { gantiAsk = false },
+            title = {
+                Text(
+                    "GANTI LIST \"${ex?.name ?: ""}\"",
+                    fontSize = 14.sp, fontFamily = FontFamily.Monospace
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        "List itu ada ${ex?.trackIds?.size ?: 0} tracks. " +
+                            "Simpan salinan senarai semasa dulu?",
+                        fontSize = 12.sp, fontFamily = FontFamily.Monospace
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    if (keepOld) {
+                        TextField(
+                            value = saveAsName,
+                            onValueChange = { saveAsName = it },
+                            singleLine = true,
+                            colors = darkFieldColors(),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp, color = Wa.Green
+                            )
+                        )
+                        Spacer(Modifier.height(2.dp))
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = keepOld,
+                            onCheckedChange = { keepOld = it },
+                            colors = CheckboxDefaults.colors(
+                                checkedColor = Wa.Green,
+                                uncheckedColor = Wa.TextDim
+                            )
+                        )
+                        Text(
+                            "Simpan salinan sebagai playlist baru",
+                            fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = Wa.TextDim
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val sel = entries.filter { checked[it.id] ?: true }
+                    val mapped = sel.map { NewTrack(it.title, it.watchUrl, it.id, it.durationSec) }
+                    val exx = existing ?: return@TextButton
+                    if (keepOld && saveAsName.isNotBlank()) {
+                        Store.copyPlaylist(exx.id, saveAsName)
+                    }
+                    Store.replacePlaylistTracks(exx.id, mapped)
+                    Toast.makeText(
+                        ctx,
+                        "\"${exx.name}\" diganti — ${sel.size} listing" +
+                            if (keepOld && saveAsName.isNotBlank()) " (salinan: \"$saveAsName\")" else "",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    gantiAsk = false
+                    onDismiss()
+                }) {
+                    Text("GANTI", color = Wa.Green)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { gantiAsk = false }) {
+                    Text("CANCEL", color = Wa.TextDim)
+                }
+            }
+        )
+    }
 }
 
 // ------------------------------------------------------------------
-// PLAYLIST MANAGER — new / open / rename / merge / delete
+// PLAYLIST MANAGER — save as / open / rename / delete
 // ------------------------------------------------------------------
 
 private sealed interface MgrSub {
-    data object New : MgrSub
     data class Rename(val pid: String) : MgrSub
     data class Delete(val pid: String) : MgrSub
+    data object SaveAs : MgrSub
 }
 
 @Composable
@@ -288,9 +419,8 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
         }
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            WaButton("NEW", Modifier.weight(1f)) {
-                subText = ""
-                sub = MgrSub.New
+            WaButton("SAVE AS", Modifier.weight(1.2f)) {
+                sub = MgrSub.SaveAs
             }
             WaButton("OPEN", Modifier.weight(1f), enabled = selId != null) {
                 selId?.let { Store.setCurrent(it) }
@@ -301,37 +431,25 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                     sub = MgrSub.Rename(pid)
                 }
             }
-        }
-        Spacer(Modifier.height(4.dp))
-        val cur = Store.currentPlaylist()
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            WaButton(
-                "MERGE -> CURRENT",
-                Modifier.weight(1.6f),
-                enabled = selId != null && cur != null && selId != cur.id
-            ) {
-                val c = Store.currentPlaylist() ?: return@WaButton
-                selId?.let { Store.mergePlaylist(fromId = it, intoId = c.id) }
-            }
-            WaButton("DELETE", Modifier.weight(1f), enabled = selId != null) {
+            WaButton("DELETE", Modifier.weight(1.1f), enabled = selId != null) {
                 selId?.let { sub = MgrSub.Delete(it) }
             }
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "MERGE -> CURRENT: salin semua listing playlist yang dipilih ke hujung playlist semasa.",
+            "SAVE AS: simpan playlist semasa sebagai nama baru, ATAU merge kandungannya ke playlist lain.",
             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
         )
 
-        // Sub dialog (rename / new / delete)
+        // Sub dialog (rename / save as / delete)
         sub?.let { s ->
             when (s) {
-                is MgrSub.New, is MgrSub.Rename -> {
+                is MgrSub.Rename -> {
                     AlertDialog(
                         onDismissRequest = { sub = null },
                         title = {
                             Text(
-                                if (s is MgrSub.New) "NEW PLAYLIST" else "RENAME PLAYLIST",
+                                "RENAME PLAYLIST",
                                 fontSize = 14.sp, fontFamily = FontFamily.Monospace
                             )
                         },
@@ -349,11 +467,7 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                         },
                         confirmButton = {
                             TextButton(onClick = {
-                                when (s) {
-                                    is MgrSub.New -> Store.createPlaylist(subText)
-                                    is MgrSub.Rename -> Store.renamePlaylist(s.pid, subText)
-                                    else -> {}
-                                }
+                                Store.renamePlaylist(s.pid, subText)
                                 sub = null
                             }) { Text("OK", color = Wa.Green) }
                         },
@@ -363,6 +477,76 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                             }
                         }
                     )
+                }
+                is MgrSub.SaveAs -> {
+                    val cur = Store.currentPlaylist()
+                    var saveName by remember { mutableStateOf("") }
+                    var saveTarget by remember { mutableStateOf<String?>(null) }
+                    val others = playlists.filter { it.id != cur?.id }
+                    WaDialog(title = "SAVE AS — ${cur?.name ?: ""}", onDismiss = { sub = null }) {
+                        Text(
+                            "1) Simpan sebagai nama baru:",
+                            color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        TextField(
+                            value = saveName,
+                            onValueChange = { saveName = it },
+                            singleLine = true,
+                            colors = darkFieldColors(),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontFamily = FontFamily.Monospace,
+                                fontSize = 12.sp, color = Wa.Green
+                            )
+                        )
+                        WaButton("SAVE AS NEW", Modifier.fillMaxWidth(), enabled = saveName.isNotBlank()) {
+                            cur?.let { Store.copyPlaylist(it.id, saveName) }
+                            sub = null
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "2) ATAU merge ke playlist sedia ada:",
+                            color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+                        )
+                        LazyColumn(
+                            Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 160.dp)
+                                .padding(top = 4.dp)
+                                .background(Color(0xFF0B0B0B))
+                        ) {
+                            itemsIndexed(others) { _, p ->
+                                val sel = p.id == saveTarget
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .background(if (sel) Wa.SelectBlue else Color.Transparent)
+                                        .clickable { saveTarget = p.id }
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Text(
+                                        p.name,
+                                        color = if (sel) Color.White else Wa.Green,
+                                        fontSize = 12.sp, fontFamily = FontFamily.Monospace,
+                                        maxLines = 1, overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            WaButton(
+                                "MERGE KE PILIHAN",
+                                Modifier.weight(2f),
+                                enabled = saveTarget != null
+                            ) {
+                                val t = saveTarget ?: return@WaButton
+                                cur?.let { Store.mergePlaylist(fromId = it.id, intoId = t) }
+                                sub = null
+                            }
+                            WaButton("CLOSE", Modifier.weight(1f)) { sub = null }
+                        }
+                    }
                 }
                 is MgrSub.Delete -> {
                     val name = playlists.firstOrNull { it.id == s.pid }?.name ?: ""
@@ -404,8 +588,8 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
 fun SettingsDialog(onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val ready by Wamp3App.ytdlReady.collectAsState()
-    val ytdlErr by Wamp3App.ytdlError.collectAsState()
+    val ready by Mp3NyokApp.ytdlReady.collectAsState()
+    val ytdlErr by Mp3NyokApp.ytdlError.collectAsState()
     var folder by remember { mutableStateOf(Store.musicFolder.value) }
     var msg by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
@@ -466,7 +650,7 @@ fun SettingsDialog(onDismiss: () -> Unit) {
         Text(
             text = when {
                 ytdlErr != null -> "yt-dlp ERROR: $ytdlErr"
-                ready -> "yt-dlp ready ${Wamp3App.ytdlVersion.value}"
+                ready -> "yt-dlp ready ${Mp3NyokApp.ytdlVersion.value}"
                 else -> "yt-dlp: initialising..."
             },
             color = if (ready) Wa.Green else Wa.TextDim,
@@ -509,7 +693,7 @@ fun SettingsDialog(onDismiss: () -> Unit) {
         Text(
             "Bypass 'confirm not a bot' / age-restricted: export cookies.txt dari browser PC " +
                 "(extension 'Get cookies.txt LOCALLY' di youtube.com), kemudian letak fail di " +
-                "Android/data/com.mrras.wamp3/files/ atau di folder muzik anda.",
+                "Android/data/com.bangnyok.mp3nyok/files/ atau di folder muzik anda.",
             color = Wa.TextDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace
         )
         Spacer(Modifier.height(4.dp))

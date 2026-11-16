@@ -1,4 +1,4 @@
-package com.mrras.wamp3.update
+package com.bangnyok.mp3nyok.update
 
 import android.content.Context
 import android.content.Intent
@@ -7,7 +7,7 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.core.content.FileProvider
-import com.mrras.wamp3.BuildConfig
+import com.bangnyok.mp3nyok.BuildConfig
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -94,7 +94,7 @@ object Updater {
         val rel = updateInfo.value ?: throw IllegalStateException("tiada info update")
         val token = BuildConfig.UPDATE_TOKEN
         val dir = context.getExternalFilesDir(null) ?: context.cacheDir
-        val out = File(dir, "wamp3-update.apk")
+        val out = File(dir, "mp3nyok-update.apk")
         downloadProgress.value = 0f
 
         val url = "https://api.github.com/repos/bangnyok/mp3nyok/releases/assets/${rel.assetId}"
@@ -160,7 +160,7 @@ object Updater {
                         Uri.parse("package:${ctx.packageName}")
                     ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 )
-                Toast.makeText(ctx, "Benarkan 'Install unknown apps' untuk Wamp3, kemudian cuba lagi.", Toast.LENGTH_LONG).show()
+                Toast.makeText(ctx, "Benarkan 'Install unknown apps' untuk Mp3Nyok, kemudian cuba lagi.", Toast.LENGTH_LONG).show()
             } catch (_: Exception) {
             }
             return

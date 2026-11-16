@@ -22,7 +22,7 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <application
-        android:name=".Wamp3App"
+        android:name=".Mp3NyokApp"
         android:allowBackup="true"
         android:extractNativeLibs="true"
         android:icon="@mipmap/ic_launcher"
@@ -31,7 +31,7 @@
         android:requestLegacyExternalStorage="true"
         android:supportsRtl="true"
         android:usesCleartextTraffic="true"
-        android:theme="@style/Theme.Wamp3"
+        android:theme="@style/Theme.Mp3Nyok"
         tools:targetApi="m">
 
         <activity

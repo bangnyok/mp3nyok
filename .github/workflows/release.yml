@@ -34,7 +34,7 @@ jobs:
       - name: Collect APK
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/release/app-release.apk dist/wamp3-${GITHUB_REF_NAME}.apk
+          cp app/build/outputs/apk/release/app-release.apk dist/mp3nyok-${GITHUB_REF_NAME}.apk
           ls -la dist/
 
       - name: Create GitHub Release (tag)
@@ -48,5 +48,5 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: wamp3-apk
+          name: mp3nyok-apk
           path: dist/*.apk

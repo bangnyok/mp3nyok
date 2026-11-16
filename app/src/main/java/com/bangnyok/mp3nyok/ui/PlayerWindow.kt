@@ -1,4 +1,4 @@
-package com.mrras.wamp3.ui
+package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -29,9 +29,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.player.PlayerHolder
-import com.mrras.wamp3.update.Updater
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.player.PlayerHolder
+import com.bangnyok.mp3nyok.player.RepeatMode
+import com.bangnyok.mp3nyok.update.Updater
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -43,7 +44,7 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
     val durMs by PlayerHolder.durationMs.collectAsState()
     val volume by PlayerHolder.volume.collectAsState()
     val shuffle by PlayerHolder.shuffle.collectAsState()
-    val repeatAll by PlayerHolder.repeatAll.collectAsState()
+    val repeatMode by PlayerHolder.repeatMode.collectAsState()
     val update by Updater.updateInfo.collectAsState()
     val loading by PlayerHolder.loading.collectAsState()
 
@@ -63,7 +64,7 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
         TitleBar(
-            "WAMP3 — YouTube Music Player",
+            "MP3NYOK — YouTube Music Player",
             trailing = {
                 update?.let { u ->
                     Text(
@@ -141,6 +142,22 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
                     color = Wa.TextDim,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
+                )
+                // Status tags: SHUF / REP ALL / REP 1 (jelas bila aktif)
+                val tags = buildList {
+                    if (shuffle) add("SHUF")
+                    when (repeatMode) {
+                        RepeatMode.ALL -> add("REP ALL")
+                        RepeatMode.ONE -> add("REP 1")
+                        RepeatMode.OFF -> {}
+                    }
+                }
+                Text(
+                    if (tags.isEmpty()) " " else tags.joinToString("  "),
+                    color = if (tags.isEmpty()) Wa.TextDim else Wa.Orange,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -227,9 +244,14 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
             }
             WaIconButton(
                 WaIcons.Repeat, Modifier.weight(1f),
-                active = repeatAll, contentDescription = "Repeat"
+                active = repeatMode != RepeatMode.OFF, contentDescription = "Repeat"
             ) {
-                PlayerHolder.repeatAll.value = !repeatAll
+                // Kitaran: OFF -> REP ALL -> REP 1 -> OFF
+                PlayerHolder.repeatMode.value = when (repeatMode) {
+                    RepeatMode.OFF -> RepeatMode.ALL
+                    RepeatMode.ALL -> RepeatMode.ONE
+                    RepeatMode.ONE -> RepeatMode.OFF
+                }
             }
         }
     }

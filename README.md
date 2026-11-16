@@ -1,21 +1,23 @@
-# Wamp3 (mp3nyok) — YouTube / YT Music to MP3 (Winamp-style Player)
+# Mp3Nyok — YouTube / YT Music to MP3 (Winamp-style Player)
 
 Native Android app (Kotlin + Jetpack Compose) untuk download muzik dari
 YouTube / YouTube Music, convert ke **MP3**, dan play dengan interface
 klasik **Winamp**.
 
-## Ciri-ciri (ikut requirement anda)
+## Ciri-ciri
 
 | Kehendak | Cara dalam app |
 |---|---|
 | Download via link atau playlist | Butang `ADD` → paste link (video atau playlist). Playlist di-fetch dengan `--flat-playlist` dan setiap video jadi satu listing |
 | Convert ke MP3 | yt-dlp `-x --audio-format mp3 --audio-quality 0` (best audio, ffmpeg bundled) |
-| Simpan dalam folder spesifik | `FOLDER` → default `/storage/emulated/0/Music/Wamp3`, boleh tukar ikut suka. Path dipaparkan di status bar bawah |
+| Simpan dalam folder spesifik | `FOLDER` → default `/storage/emulated/0/Music/Mp3Nyok`, boleh tukar ikut suka. Path dipaparkan di status bar bawah |
 | Interface Winamp | Panel gelap klasik, LED time merah, playlist hijau monospace, transport buttons |
-| Play dulu untuk test | Tap mana-mana listing: kalau MP3 belum ada → **test stream** terus dari web (label `TEST STREAM` / `WEB`); kalau sudah download → main fail MP3 (`MP3`) |
-| Recreate playlist / buang listing | Pilih listing → `REM` untuk buang; `MANAGE` untuk playlist baru / delete playlist |
-| Merge playlist | `MANAGE` → pilih playlist sumber → `MERGE -> CURRENT` (semua listing disalin ke hujung playlist semasa) |
+| Repeat / Shuffle | Butang repeat kitaran `OFF → REP ALL → REP 1`; status `SHUF` / `REP ALL` / `REP 1` dipaparkan di panel player |
+| Play dulu untuk test | Tap mana-mana listing: kalau MP3 belum ada → **test stream** terus dari web (label `TEST STREAM`); kalau sudah download → main fail MP3 (`MP3`) instan, tanpa internet |
 | Rename listing dulu | Dalam dialog `ADD`, setiap listing ada text field nama fail — edit sebelum add. Lepas tu boleh `RENAME` mana-mana listing; **fail MP3 di disk juga ikut direname** |
+| Save As / Merge playlist | `MANAGE` → `SAVE AS`: simpan playlist semasa sebagai nama baru, ATAU merge kandungannya ke playlist sedia ada |
+| Add URL (append/ganti) | Bila nama playlist fetch sudah wujud → pilih `APPEND` (campur) atau `GANTI` (kosongkan list itu; boleh simpan salinan senarai lama dulu) |
+| In-app update | Semak GitHub Releases repo ini & download-install APK terus dalam app |
 
 ## Cara build
 
@@ -34,13 +36,13 @@ klasik **Winamp**.
 
 - **Kali pertama buka app**, yt-dlp ambil beberapa saat untuk init
   (status bar bawah akan tulis `yt-dlp: initialising...`).
-- Untuk simpan ke folder awam (`Music/Wamp3`) di Android 11+,
+- Untuk simpan ke folder awam (`Music/Mp3Nyok`) di Android 11+,
   tekan `FOLDER` → **GRANT ALL FILES ACCESS**. Tanpa itu, boleh guna
-  folder app-specific (`Android/data/com.mrras.wamp3/files/Music`).
+  folder app-specific (`Android/data/com.bangnyok.mp3nyok/files/Music`).
 - `UPDATE yt-dlp` dalam Settings untuk kemaskini extractor bila YouTube
   berubah.
-- Merge playlist menyalin listing (bukan pindah), jadi playlist asal
-  kekal.
+- `GANTI` playlist tidak memadam fail MP3 di disk dan tidak mengubah
+  playlist lain — hanya listing playlist itu yang dikosongkan.
 - Fail MP3 download dulu dengan nama sementara (yt video id), kemudian
   direname ikut nama listing — jika nama sudah wujud, jadi
   `Nama (2).mp3`.
@@ -50,14 +52,16 @@ klasik **Winamp**.
 ## Struktur kod
 
 ```
-app/src/main/java/com/mrras/wamp3/
-  Wamp3App.kt          — init yt-dlp + ffmpeg di background
+app/src/main/java/com/bangnyok/mp3nyok/
+  Mp3NyokApp.kt        — init yt-dlp + ffmpeg di background
   MainActivity.kt      — permission + setContent
   data/Models.kt       — Track / Playlist / NewTrack
   data/Store.kt        — library.json (playlists, tracks, folder)
-  player/PlayerHolder.kt — ExoPlayer + test-stream dari yt-dlp
+  player/PlayerHolder.kt — ExoPlayer + RepeatMode + test-stream dari yt-dlp
   download/DLEngine.kt — queue download, listEntries, update yt-dlp
+  update/Updater.kt    — semak + download + install APK dari GitHub Releases
   ui/WaTheme.kt        — warna Winamp + komponen kongsi
+  ui/WaIcons.kt        — transport icons (vektor gaya Winamp)
   ui/PlayerWindow.kt   — panel player utama
   ui/PlaylistWindow.kt — playlist editor (ADD/REM/RENAME/DL/MANAGE)
   ui/Dialogs.kt        — Add URL, Playlist Manager, Settings, Rename

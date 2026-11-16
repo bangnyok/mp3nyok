@@ -1,4 +1,4 @@
-package com.mrras.wamp3.player
+package com.bangnyok.mp3nyok.player
 
 import android.content.Context
 import android.net.Uri
@@ -13,9 +13,9 @@ import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import com.mrras.wamp3.Wamp3App
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.data.Track
+import com.bangnyok.mp3nyok.Mp3NyokApp
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.data.Track
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -28,6 +28,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.withContext
 import java.io.File
+
+/** Mod repeat: OFF (main sekali, berhenti), ALL (ulang senarai), ONE (ulang lagu sama). */
+enum class RepeatMode { OFF, ALL, ONE }
 
 /**
  * ExoPlayer singleton. Mainkan MP3 dari fail, atau "test stream"
@@ -46,7 +49,7 @@ object PlayerHolder {
     val durationMs = MutableStateFlow(0L)
     val volume = MutableStateFlow(1f)
     val shuffle = MutableStateFlow(false)
-    val repeatAll = MutableStateFlow(true)
+    val repeatMode = MutableStateFlow(RepeatMode.ALL)
 
     private lateinit var appContext: Context
     private var scope: CoroutineScope? = null
@@ -89,7 +92,13 @@ object PlayerHolder {
 
             override fun onPlaybackStateChanged(playbackState: Int) {
                 if (playbackState == Player.STATE_ENDED && current.value != null) {
-                    playNext()
+                    if (repeatMode.value == RepeatMode.ONE) {
+                        // Ulang lagu yang sama
+                        player.seekTo(0)
+                        player.play()
+                    } else {
+                        playNext(auto = true)
+                    }
                 }
             }
 
@@ -168,7 +177,7 @@ object PlayerHolder {
         }
 
         // 3) Extract baru (perlu beberapa saat)
-        if (!Wamp3App.ytdlReady.value) {
+        if (!Mp3NyokApp.ytdlReady.value) {
             Toast.makeText(appContext, "yt-dlp masih initialising...", Toast.LENGTH_SHORT).show()
             return
         }
@@ -238,14 +247,18 @@ object PlayerHolder {
         player.play()
     }
 
-    fun playNext() {
+    /**
+     * @param auto true = habis sendiri (STATE_ENDED): wrap hanya bila REP ALL.
+     *             false = tekan butang NEXT: sentiasa wrap.
+     */
+    fun playNext(auto: Boolean = false) {
         if (queue.isEmpty()) return
         val nextIdx = when {
             shuffle.value && queue.size > 1 ->
                 (0 until queue.size).filter { it != queueIndex }.random()
             queueIndex + 1 < queue.size -> queueIndex + 1
-            repeatAll.value -> 0
-            else -> { stop(); return }
+            auto && repeatMode.value != RepeatMode.ALL -> { stop(); return }
+            else -> 0
         }
         playTrack(queue[nextIdx], queue, nextIdx)
     }
@@ -254,7 +267,7 @@ object PlayerHolder {
         if (queue.isEmpty()) return
         if (queueIndex - 1 >= 0) {
             playTrack(queue[queueIndex - 1], queue, queueIndex - 1)
-        } else if (repeatAll.value) {
+        } else {
             playTrack(queue.last(), queue, queue.size - 1)
         }
     }

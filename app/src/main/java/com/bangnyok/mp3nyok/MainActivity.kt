@@ -1,4 +1,4 @@
-package com.mrras.wamp3
+package com.bangnyok.mp3nyok
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -10,7 +10,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import com.mrras.wamp3.ui.MainScreen
+import com.bangnyok.mp3nyok.ui.MainScreen
 
 class MainActivity : ComponentActivity() {
 

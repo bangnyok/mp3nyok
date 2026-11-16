@@ -1,9 +1,9 @@
-package com.mrras.wamp3.download
+package com.bangnyok.mp3nyok.download
 
 import android.content.Context
-import com.mrras.wamp3.Wamp3App
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.data.Track
+import com.bangnyok.mp3nyok.Mp3NyokApp
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.data.Track
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CoroutineScope
@@ -60,7 +60,7 @@ object DLEngine {
     }
 
     fun cancel(trackId: String) {
-        runCatching { YoutubeDL.getInstance().destroyProcessById("wamp3-$trackId") }
+        runCatching { YoutubeDL.getInstance().destroyProcessById("mp3nyok-$trackId") }
     }
 
     fun clearFinished() {
@@ -76,7 +76,7 @@ object DLEngine {
     private suspend fun process(track: Track) {
         setJob(track.id) { it.copy(state = State.RUNNING, progress = 0f) }
         try {
-            if (!Wamp3App.ytdlReady.value) {
+            if (!Mp3NyokApp.ytdlReady.value) {
                 throw IllegalStateException("yt-dlp masih initialising, cuba lagi sebentar")
             }
             val dir = File(Store.musicFolder.value)
@@ -93,7 +93,7 @@ object DLEngine {
             req.addOption("--no-warnings")
             Store.findCookies()?.let { req.addOption("--cookies", it.absolutePath) }
 
-            YoutubeDL.getInstance().execute(req, "wamp3-${track.id}") { p, _, line ->
+            YoutubeDL.getInstance().execute(req, "mp3nyok-${track.id}") { p, _, line ->
                 setJob(track.id) { it.copy(progress = p, line = line) }
             }
 

@@ -1,4 +1,4 @@
-package com.mrras.wamp3.data
+package com.bangnyok.mp3nyok.data
 
 import android.content.Context
 import android.os.Environment
@@ -64,7 +64,7 @@ object Store {
     }
 
     fun defaultMusicFolder(): String =
-        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "Wamp3").absolutePath
+        File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "Mp3Nyok").absolutePath
 
     private fun save() {
         try {
@@ -166,6 +166,58 @@ object Store {
         }
         tracks.value = tracks.value - trackId
         save()
+    }
+
+    /**
+     * Ganti semua track playlist <pid> dengan <newTracks>.
+     * Fail MP3 lama kekal di disk; hanya listing yang dikosongkan/diganti.
+     */
+    fun replacePlaylistTracks(pid: String, newTracks: List<NewTrack>) {
+        val target = playlists.value.firstOrNull { it.id == pid } ?: return
+        val map = tracks.value.toMutableMap()
+        // Buang rekod track lama playlist ini (fail di disk kekal)
+        for (tid in target.trackIds) map.remove(tid)
+        val ids = mutableListOf<String>()
+        for (nt in newTracks) {
+            val t = Track(
+                id = UUID.randomUUID().toString(),
+                playlistId = pid,
+                title = nt.title,
+                sourceUrl = nt.sourceUrl,
+                ytid = nt.ytid,
+                fileName = sanitizeFileName(nt.title),
+                durationSec = nt.durationSec
+            )
+            map[t.id] = t
+            ids.add(t.id)
+        }
+        tracks.value = map
+        playlists.value = playlists.value.map {
+            if (it.id == pid) it.copy(trackIds = ids) else it
+        }
+        save()
+    }
+
+    /** Salin semua track playlist <fromId> ke playlist BARU bernama <newName>. */
+    fun copyPlaylist(fromId: String, newName: String): Playlist {
+        val from = playlists.value.firstOrNull { it.id == fromId }
+        val p = createPlaylist(newName.ifBlank { "Playlist" })
+        if (from != null && from.trackIds.isNotEmpty()) {
+            val map = tracks.value.toMutableMap()
+            val ids = mutableListOf<String>()
+            for (tid in from.trackIds) {
+                val src = tracks.value[tid] ?: continue
+                val copy = src.copy(id = UUID.randomUUID().toString(), playlistId = p.id)
+                map[copy.id] = copy
+                ids.add(copy.id)
+            }
+            tracks.value = map
+            playlists.value = playlists.value.map {
+                if (it.id == p.id) it.copy(trackIds = ids) else it
+            }
+            save()
+        }
+        return p
     }
 
     /** Merge: salin semua track playlist <fromId> ke hujung playlist <intoId>. */

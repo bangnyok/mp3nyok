@@ -1,8 +1,8 @@
-package com.mrras.wamp3
+package com.bangnyok.mp3nyok
 
 import android.app.Application
-import com.mrras.wamp3.data.Store
-import com.mrras.wamp3.player.PlayerHolder
+import com.bangnyok.mp3nyok.data.Store
+import com.bangnyok.mp3nyok.player.PlayerHolder
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import kotlinx.coroutines.CoroutineScope
@@ -11,7 +11,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 
-class Wamp3App : Application() {
+class Mp3NyokApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
@@ -22,9 +22,9 @@ class Wamp3App : Application() {
         val appScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
         appScope.launch {
             try {
-                YoutubeDL.getInstance().init(this@Wamp3App)
-                FFmpeg.getInstance().init(this@Wamp3App)
-                ytdlVersion.value = YoutubeDL.version(this@Wamp3App) ?: ""
+                YoutubeDL.getInstance().init(this@Mp3NyokApp)
+                FFmpeg.getInstance().init(this@Mp3NyokApp)
+                ytdlVersion.value = YoutubeDL.version(this@Mp3NyokApp) ?: ""
                 ytdlReady.value = true
             } catch (e: Exception) {
                 ytdlError.value = e.message ?: e.toString()

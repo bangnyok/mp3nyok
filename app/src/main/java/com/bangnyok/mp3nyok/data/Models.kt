@@ -1,4 +1,4 @@
-package com.mrras.wamp3.data
+package com.bangnyok.mp3nyok.data
 
 import kotlinx.serialization.Serializable
 
