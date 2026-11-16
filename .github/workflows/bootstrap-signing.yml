@@ -43,7 +43,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add wamp3.keystore keystore.properties
+          git add -f wamp3.keystore keystore.properties
           if git diff --cached --quiet; then
             echo "Tiada perubahan untuk di-commit."
           else

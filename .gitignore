@@ -14,6 +14,8 @@ captures/
 local.properties
 *.keystore
 *.jks
+# Keystore release ni sengaja di-commit (repo private, personal sahaja)
+!wamp3.keystore
 
 # Logs / OS
 *.log
