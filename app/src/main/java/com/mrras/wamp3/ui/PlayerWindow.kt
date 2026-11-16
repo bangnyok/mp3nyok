@@ -194,15 +194,18 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
 
         Spacer(Modifier.height(2.dp))
 
-        // Transport buttons
+        // Transport buttons (icon gaya Winamp)
         Row(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            WaButton("|<<", Modifier.weight(1f)) { PlayerHolder.playPrev() }
-            WaButton(
-                if (isPlaying) "II" else ">>",
-                Modifier.weight(1f)
+            WaIconButton(WaIcons.Prev, Modifier.weight(1f), contentDescription = "Previous") {
+                PlayerHolder.playPrev()
+            }
+            WaIconButton(
+                if (isPlaying) WaIcons.Pause else WaIcons.Play,
+                Modifier.weight(1f),
+                contentDescription = "Play/Pause"
             ) {
                 if (PlayerHolder.current.value == null) {
                     if (plTracks.isNotEmpty()) PlayerHolder.playTrack(plTracks[0], plTracks, 0)
@@ -210,12 +213,22 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
                     PlayerHolder.toggle()
                 }
             }
-            WaButton("[]", Modifier.weight(1f)) { PlayerHolder.stop() }
-            WaButton(">|", Modifier.weight(1f)) { PlayerHolder.playNext() }
-            WaButton(if (shuffle) "SHF*" else "SHF", Modifier.weight(1f)) {
+            WaIconButton(WaIcons.Stop, Modifier.weight(1f), contentDescription = "Stop") {
+                PlayerHolder.stop()
+            }
+            WaIconButton(WaIcons.Next, Modifier.weight(1f), contentDescription = "Next") {
+                PlayerHolder.playNext()
+            }
+            WaIconButton(
+                WaIcons.Shuffle, Modifier.weight(1f),
+                active = shuffle, contentDescription = "Shuffle"
+            ) {
                 PlayerHolder.shuffle.value = !shuffle
             }
-            WaButton(if (repeatAll) "RPT*" else "RPT", Modifier.weight(1f)) {
+            WaIconButton(
+                WaIcons.Repeat, Modifier.weight(1f),
+                active = repeatAll, contentDescription = "Repeat"
+            ) {
                 PlayerHolder.repeatAll.value = !repeatAll
             }
         }

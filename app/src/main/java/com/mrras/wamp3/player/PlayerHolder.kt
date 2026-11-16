@@ -9,6 +9,7 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.Player
+import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -59,12 +60,14 @@ object PlayerHolder {
 
     fun init(context: Context) {
         appContext = context.applicationContext
-        val dataSourceFactory = DefaultHttpDataSource.Factory()
+        val httpFactory = DefaultHttpDataSource.Factory()
             .setUserAgent(
                 "Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 " +
                     "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
             )
             .setAllowCrossProtocolRedirects(true)
+        // DefaultDataSource route ikut scheme: http -> httpFactory, file/content -> FileDataSource
+        val dataSourceFactory = DefaultDataSource.Factory(appContext, httpFactory)
 
         player = ExoPlayer.Builder(appContext)
             .setMediaSourceFactory(DefaultMediaSourceFactory(dataSourceFactory))
@@ -140,8 +143,8 @@ object PlayerHolder {
         durationMs.value = ((track.durationSec ?: 0.0) * 1000).toLong()
 
         // 1) Kalau MP3 dah ada, main dari fail — instan, tanpa network
-        val file = track.filePath?.let { File(it) }
-        if (file != null && file.exists()) {
+        val file = resolveLocalFile(track)
+        if (file != null) {
             loading.value = false
             player.setMediaItem(
                 MediaItem.Builder()
@@ -205,6 +208,22 @@ object PlayerHolder {
                 }
             }
         }
+    }
+
+    /** Cari fail MP3 lokal: ikut path tersimpan, atau cari semula di folder muzik. */
+    private fun resolveLocalFile(track: Track): File? {
+        track.filePath?.let { p ->
+            val f = File(p)
+            if (f.exists()) return f
+        }
+        if (track.fileName.isNotBlank()) {
+            val f = File(Store.musicFolder.value, "${track.fileName}.mp3")
+            if (f.exists()) {
+                Store.markDownloaded(track.id, f.absolutePath)
+                return f
+            }
+        }
+        return null
     }
 
     private fun startStream(track: Track, url: String, mime: String?) {
