@@ -45,6 +45,7 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
     val shuffle by PlayerHolder.shuffle.collectAsState()
     val repeatAll by PlayerHolder.repeatAll.collectAsState()
     val update by Updater.updateInfo.collectAsState()
+    val loading by PlayerHolder.loading.collectAsState()
 
     val playlists by Store.playlists.collectAsState()
     val tracks by Store.tracks.collectAsState()
@@ -122,8 +123,16 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
             Spacer(Modifier.width(10.dp))
             Column {
                 Text(
-                    if (isStream) "TEST STREAM (belum download)" else "MP3 FILE",
-                    color = if (isStream) Wa.Orange else Wa.Green,
+                    when {
+                        loading -> "MENGAMBIL TEST STREAM..."
+                        isStream -> "TEST STREAM (belum download)"
+                        else -> "MP3 FILE"
+                    },
+                    color = when {
+                        loading -> Wa.Yellow
+                        isStream -> Wa.Orange
+                        else -> Wa.Green
+                    },
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace
                 )

@@ -91,6 +91,7 @@ object DLEngine {
             req.addOption("--no-playlist")
             req.addOption("--no-mtime")
             req.addOption("--no-warnings")
+            Store.findCookies()?.let { req.addOption("--cookies", it.absolutePath) }
 
             YoutubeDL.getInstance().execute(req, "wamp3-${track.id}") { p, _, line ->
                 setJob(track.id) { it.copy(progress = p, line = line) }
@@ -122,6 +123,7 @@ object DLEngine {
         req.addOption("--flat-playlist")
         req.addOption("--dump-single-json")
         req.addOption("--no-warnings")
+        Store.findCookies()?.let { req.addOption("--cookies", it.absolutePath) }
         val resp = YoutubeDL.getInstance().execute(req)
         val obj = JSONObject(resp.out)
         val title = obj.optString("title", "").ifBlank { "Playlist" }

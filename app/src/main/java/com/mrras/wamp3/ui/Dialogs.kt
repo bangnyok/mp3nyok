@@ -500,6 +500,19 @@ fun SettingsDialog(onDismiss: () -> Unit) {
             fontSize = 10.sp, fontFamily = FontFamily.Monospace
         )
         Spacer(Modifier.height(4.dp))
+        val hasCookies = remember { Store.findCookies() != null }
+        Text(
+            "COOKIES: " + if (hasCookies) "ADA (bot-check bypass aktif)" else "TIADA",
+            color = if (hasCookies) Wa.Green else Wa.TextDim,
+            fontSize = 10.sp, fontFamily = FontFamily.Monospace
+        )
+        Text(
+            "Bypass 'confirm not a bot' / age-restricted: export cookies.txt dari browser PC " +
+                "(extension 'Get cookies.txt LOCALLY' di youtube.com), kemudian letak fail di " +
+                "Android/data/com.mrras.wamp3/files/ atau di folder muzik anda.",
+            color = Wa.TextDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace
+        )
+        Spacer(Modifier.height(4.dp))
         Text(
             "Nota: MP3 disimpan dengan best audio (diconvert oleh ffmpeg).",
             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace

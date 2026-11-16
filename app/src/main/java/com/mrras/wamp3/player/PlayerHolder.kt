@@ -13,6 +13,7 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.mrras.wamp3.Wamp3App
+import com.mrras.wamp3.data.Store
 import com.mrras.wamp3.data.Track
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
@@ -39,6 +40,7 @@ object PlayerHolder {
     val isPlaying = MutableStateFlow(false)
     val current = MutableStateFlow<Track?>(null)
     val isStream = MutableStateFlow(false)   // true = main test stream dari web
+    val loading = MutableStateFlow(false)    // true = sedang extract test stream
     val positionMs = MutableStateFlow(0L)
     val durationMs = MutableStateFlow(0L)
     val volume = MutableStateFlow(1f)
@@ -49,6 +51,11 @@ object PlayerHolder {
     private var scope: CoroutineScope? = null
     private var queue: List<Track> = emptyList()
     private var queueIndex = -1
+
+    // Cache stream URL per track — googlevideo URL sah ~6 jam, kita cache 5 jam
+    private val streamCache = mutableMapOf<String, Pair<String, String?>>() // id -> (url, mime)
+    private val streamCacheAt = mutableMapOf<String, Long>()
+    private val streamTtl = 5 * 60 * 60 * 1000L
 
     fun init(context: Context) {
         appContext = context.applicationContext
@@ -88,10 +95,14 @@ object PlayerHolder {
             }
         })
 
+        // Cache juga bila playback siap sedia (supaya indicator tak menggantung)
         scope!!.launch {
             while (isActive) {
                 delay(250)
                 if (player.isPlaying) positionMs.value = player.currentPosition
+                if (loading.value && player.playbackState == Player.STATE_READY) {
+                    loading.value = false
+                }
             }
         }
     }
@@ -112,6 +123,7 @@ object PlayerHolder {
         positionMs.value = 0L
         durationMs.value = 0L
         isStream.value = false
+        loading.value = false
     }
 
     fun seekTo(ms: Long) {
@@ -127,9 +139,10 @@ object PlayerHolder {
         positionMs.value = 0L
         durationMs.value = ((track.durationSec ?: 0.0) * 1000).toLong()
 
-        // 1) Kalau MP3 dah ada, main dari fail
+        // 1) Kalau MP3 dah ada, main dari fail — instan, tanpa network
         val file = track.filePath?.let { File(it) }
         if (file != null && file.exists()) {
+            loading.value = false
             player.setMediaItem(
                 MediaItem.Builder()
                     .setUri(Uri.fromFile(file))
@@ -141,17 +154,29 @@ object PlayerHolder {
             return
         }
 
-        // 2) Belum download — test stream terus dari YouTube
+        // 2) Belum download — test stream. Guna cache kalau ada (instan).
         isStream.value = true
+        val cached = streamCache[track.id]
+        val cachedAt = streamCacheAt[track.id] ?: 0L
+        if (cached != null && System.currentTimeMillis() - cachedAt < streamTtl) {
+            loading.value = false
+            startStream(track, cached.first, cached.second)
+            return
+        }
+
+        // 3) Extract baru (perlu beberapa saat)
         if (!Wamp3App.ytdlReady.value) {
             Toast.makeText(appContext, "yt-dlp masih initialising...", Toast.LENGTH_SHORT).show()
             return
         }
+        loading.value = true
         scope!!.launch(Dispatchers.IO) {
             try {
                 val req = YoutubeDLRequest(track.sourceUrl)
                 req.addOption("-f", "bestaudio/best")
+                req.addOption("--no-playlist")
                 req.addOption("--no-warnings")
+                Store.findCookies()?.let { req.addOption("--cookies", it.absolutePath) }
                 val info = YoutubeDL.getInstance().getInfo(req)
                 val streamUrl = info.url ?: throw YoutubeDLException("tiada stream url")
                 val mime = when (info.ext) {
@@ -161,21 +186,17 @@ object PlayerHolder {
                     "ogg", "opus" -> MimeTypes.AUDIO_OGG
                     else -> null
                 }
+                streamCache[track.id] = streamUrl to mime
+                streamCacheAt[track.id] = System.currentTimeMillis()
                 withContext(Dispatchers.Main) {
                     if (current.value?.id == track.id) { // masih track yang diminta
-                        player.setMediaItem(
-                            MediaItem.Builder()
-                                .setUri(streamUrl)
-                                .setMimeType(mime)
-                                .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).build())
-                                .build()
-                        )
-                        player.prepare()
-                        player.play()
+                        loading.value = false
+                        startStream(track, streamUrl, mime)
                     }
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
+                    loading.value = false
                     Toast.makeText(
                         appContext,
                         "Test stream gagal: ${e.message?.take(200) ?: "-"}",
@@ -184,6 +205,18 @@ object PlayerHolder {
                 }
             }
         }
+    }
+
+    private fun startStream(track: Track, url: String, mime: String?) {
+        player.setMediaItem(
+            MediaItem.Builder()
+                .setUri(url)
+                .setMimeType(mime)
+                .setMediaMetadata(MediaMetadata.Builder().setTitle(track.title).build())
+                .build()
+        )
+        player.prepare()
+        player.play()
     }
 
     fun playNext() {

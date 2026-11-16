@@ -27,8 +27,25 @@ object Store {
     val currentPlaylistId = MutableStateFlow<String?>(null)
     val musicFolder = MutableStateFlow("")
 
+    var privateFilesDir: File? = null
+        private set
+    var externalFilesDir: File? = null
+        private set
+
+    /**
+     * Cookies yt-dlp (optional): cari cookies.txt di app dir / app external
+     * dir / folder muzik. Guna untuk bypass bot-check & age-restriction.
+     */
+    fun findCookies(): File? = listOfNotNull(
+        privateFilesDir?.let { File(it, "cookies.txt") },
+        externalFilesDir?.let { File(it, "cookies.txt") },
+        File(musicFolder.value, "cookies.txt")
+    ).firstOrNull { it.exists() && it.length() > 0 }
+
     fun init(context: Context) {
         file = File(context.filesDir, "library.json")
+        privateFilesDir = context.filesDir
+        externalFilesDir = context.getExternalFilesDir(null)
         val lib = if (file.exists()) {
             try {
                 json.decodeFromString<LibraryFile>(file.readText())
