@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,10 +31,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mrras.wamp3.data.Store
 import com.mrras.wamp3.player.PlayerHolder
+import com.mrras.wamp3.update.Updater
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PlayerWindow(modifier: Modifier = Modifier) {
+fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
     val isPlaying by PlayerHolder.isPlaying.collectAsState()
     val current by PlayerHolder.current.collectAsState()
     val isStream by PlayerHolder.isStream.collectAsState()
@@ -42,6 +44,7 @@ fun PlayerWindow(modifier: Modifier = Modifier) {
     val volume by PlayerHolder.volume.collectAsState()
     val shuffle by PlayerHolder.shuffle.collectAsState()
     val repeatAll by PlayerHolder.repeatAll.collectAsState()
+    val update by Updater.updateInfo.collectAsState()
 
     val playlists by Store.playlists.collectAsState()
     val tracks by Store.tracks.collectAsState()
@@ -58,7 +61,23 @@ fun PlayerWindow(modifier: Modifier = Modifier) {
             .background(Wa.Bg)
             .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
-        TitleBar("WAMP3 — YouTube Music Player")
+        TitleBar(
+            "WAMP3 — YouTube Music Player",
+            trailing = {
+                update?.let { u ->
+                    Text(
+                        "UPD ${u.version.removePrefix("v")} >",
+                        color = Wa.Orange,
+                        fontSize = 10.sp,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier
+                            .clickable { onUpdate() }
+                            .padding(start = 8.dp)
+                    )
+                }
+            }
+        )
         Spacer(Modifier.height(8.dp))
 
         // Marquee tajuk

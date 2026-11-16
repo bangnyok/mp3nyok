@@ -49,7 +49,11 @@ object Wa {
 }
 
 @Composable
-fun TitleBar(text: String, modifier: Modifier = Modifier) {
+fun TitleBar(
+    text: String,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null
+) {
     Row(
         modifier
             .fillMaxWidth()
@@ -64,8 +68,10 @@ fun TitleBar(text: String, modifier: Modifier = Modifier) {
             fontFamily = FontFamily.Monospace,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
         )
+        trailing?.invoke()
     }
 }
 

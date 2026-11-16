@@ -5,6 +5,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -20,6 +21,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -39,16 +42,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mrras.wamp3.BuildConfig
 import com.mrras.wamp3.Wamp3App
 import com.mrras.wamp3.data.NewTrack
 import com.mrras.wamp3.data.Store
 import com.mrras.wamp3.download.DLEngine
+import com.mrras.wamp3.update.Updater
 import kotlinx.coroutines.launch
 
 // ------------------------------------------------------------------
@@ -59,6 +65,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun AddUrlDialog(onDismiss: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val ctx = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val ready by Wamp3App.ytdlReady.collectAsState()
     var url by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -73,16 +81,25 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
             "Paste link (video atau playlist):",
             color = Wa.TextDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace
         )
-        TextField(
-            value = url,
-            onValueChange = { url = it },
-            singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(
-                fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = Wa.Green
-            ),
-            colors = darkFieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            TextField(
+                value = url,
+                onValueChange = { url = it },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontFamily = FontFamily.Monospace, fontSize = 12.sp, color = Wa.Green
+                ),
+                colors = darkFieldColors(),
+                modifier = Modifier.weight(1f)
+            )
+            WaButton("PASTE") {
+                val t = clipboard.getText()?.toString()?.trim()
+                if (!t.isNullOrBlank()) url = t
+            }
+        }
         Spacer(Modifier.height(6.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             WaButton("FETCH", Modifier.weight(1f), enabled = url.isNotBlank() && !busy && ready) {
@@ -199,10 +216,13 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                     enabled = checked.any { it.value }
                 ) {
                     val sel = entries.filter { checked[it.id] ?: true }
-                    Store.addTracks(
-                        plName.ifBlank { "Playlist" },
-                        sel.map { NewTrack(it.title, it.watchUrl, it.id, it.durationSec) }
-                    )
+                    val targetName = plName.ifBlank { "Playlist" }
+                    Store.addTracks(targetName, sel.map { NewTrack(it.title, it.watchUrl, it.id, it.durationSec) })
+                    Toast.makeText(
+                        ctx,
+                        "${sel.size} listing ditambah ke \"$targetName\"",
+                        Toast.LENGTH_SHORT
+                    ).show()
                     onDismiss()
                 }
                 WaButton("CANCEL", Modifier.weight(1f), onClick = onDismiss)
@@ -475,9 +495,96 @@ fun SettingsDialog(onDismiss: () -> Unit) {
         }
         Spacer(Modifier.height(4.dp))
         Text(
+            "UPDATE CHECK: " + if (BuildConfig.UPDATE_TOKEN.isBlank()) "OFF (token tiada)" else "ON",
+            color = if (BuildConfig.UPDATE_TOKEN.isBlank()) Wa.TextDim else Wa.Green,
+            fontSize = 10.sp, fontFamily = FontFamily.Monospace
+        )
+        Spacer(Modifier.height(4.dp))
+        Text(
             "Nota: MP3 disimpan dengan best audio (diconvert oleh ffmpeg).",
             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
         )
+    }
+}
+
+// ------------------------------------------------------------------
+// UPDATE DIALOG — download & install APK dari GitHub Releases
+// ------------------------------------------------------------------
+
+@Composable
+fun UpdateDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val rel by Updater.updateInfo.collectAsState()
+    val prog by Updater.downloadProgress.collectAsState()
+    var installing by remember { mutableStateOf(false) }
+    var err by remember { mutableStateOf<String?>(null) }
+
+    WaDialog(title = "UPDATE", onDismiss = onDismiss) {
+        val r = rel
+        if (r == null) {
+            Text(
+                "Tiada update dikesan.",
+                color = Wa.TextDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace
+            )
+            Spacer(Modifier.height(6.dp))
+            WaButton("CLOSE", Modifier.fillMaxWidth(), onClick = onDismiss)
+        } else {
+            Text(
+                "VERSI BARU: ${r.version}   (semasa: ${BuildConfig.VERSION_NAME})",
+                color = Wa.Green, fontSize = 12.sp,
+                fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(6.dp))
+            if (r.notes.isNotBlank()) {
+                Text(
+                    r.notes.take(900),
+                    color = Wa.Text,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    modifier = Modifier
+                        .heightIn(max = 180.dp)
+                        .verticalScroll(rememberScrollState())
+                )
+                Spacer(Modifier.height(6.dp))
+            }
+            prog?.let {
+                androidx.compose.material3.LinearProgressIndicator(
+                    progress = { it },
+                    color = Wa.Green,
+                    trackColor = Color(0xFF333333),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    "Download ${(it * 100).toInt()}%",
+                    color = Wa.Orange, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+                )
+            }
+            err?.let {
+                Text(
+                    "ERROR: $it",
+                    color = Color(0xFFFF5050), fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace, maxLines = 3
+                )
+            }
+            Spacer(Modifier.height(6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                WaButton("DOWNLOAD & INSTALL", Modifier.weight(1f), enabled = !installing) {
+                    installing = true
+                    err = null
+                    scope.launch {
+                        try {
+                            val f = Updater.downloadApk(ctx)
+                            Updater.install(ctx, f)
+                        } catch (e: Exception) {
+                            err = e.message?.take(200) ?: "gagal download"
+                        }
+                        installing = false
+                    }
+                }
+                WaButton("CLOSE", Modifier.weight(1f), onClick = onDismiss)
+            }
+        }
     }
 }
 

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.mrras.wamp3.Wamp3App
 import com.mrras.wamp3.data.Store
 import com.mrras.wamp3.download.DLEngine
+import com.mrras.wamp3.update.Updater
 
 private sealed interface DialogKind {
     data object AddUrl : DialogKind
@@ -39,6 +41,10 @@ private sealed interface DialogKind {
 @Composable
 fun MainScreen() {
     var dialog by remember { mutableStateOf<DialogKind?>(null) }
+    var showUpdate by remember { mutableStateOf(false) }
+
+    // Semak update GitHub sekali bila app dibuka
+    LaunchedEffect(Unit) { Updater.checkAsync() }
 
     Column(
         Modifier
@@ -46,7 +52,7 @@ fun MainScreen() {
             .background(Color.Black)
             .systemBarsPadding()
     ) {
-        PlayerWindow()
+        PlayerWindow(onUpdate = { showUpdate = true })
         PlaylistWindow(
             onAddUrl = { dialog = DialogKind.AddUrl },
             onManage = { dialog = DialogKind.Manage },
@@ -63,6 +69,10 @@ fun MainScreen() {
         is DialogKind.Settings -> SettingsDialog { dialog = null }
         is DialogKind.Rename -> RenameDialog(d.trackId) { dialog = null }
         null -> {}
+    }
+
+    if (showUpdate) {
+        UpdateDialog(onDismiss = { showUpdate = false })
     }
 }
 

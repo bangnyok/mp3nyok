@@ -64,6 +64,13 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+    defaultConfig {
+        buildConfigField(
+            "String", "UPDATE_TOKEN",
+            "\"${(project.findProperty("updateToken") as String?) ?: ""}\""
+        )
     }
     packaging {
         // Required by youtubedl-android (bundled python/ffmpeg native libs)

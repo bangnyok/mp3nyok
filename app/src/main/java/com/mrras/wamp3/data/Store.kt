@@ -111,9 +111,13 @@ object Store {
         save()
     }
 
-    fun addTracks(pid: String, newTracks: List<NewTrack>) {
+    fun addTracks(nameOrId: String, newTracks: List<NewTrack>) {
         if (newTracks.isEmpty()) return
-        val target = playlists.value.firstOrNull { it.id == pid } ?: return
+        // Resolve: id dulu, kemudian nama (dialog Add hantar nama playlist)
+        val target = playlists.value.firstOrNull { it.id == nameOrId }
+            ?: playlists.value.firstOrNull { it.name.equals(nameOrId, ignoreCase = true) }
+            ?: createPlaylist(nameOrId)
+        val pid = target.id
         val map = tracks.value.toMutableMap()
         val ids = target.trackIds.toMutableList()
         for (nt in newTracks) {
@@ -133,6 +137,8 @@ object Store {
         playlists.value = playlists.value.map {
             if (it.id == pid) it.copy(trackIds = ids) else it
         }
+        // Tunjukkan playlist itu terus selepas tambah listing
+        currentPlaylistId.value = pid
         save()
     }
 
