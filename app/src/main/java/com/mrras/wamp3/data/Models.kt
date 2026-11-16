@@ -32,7 +32,7 @@ data class Playlist(
 )
 
 @Serializable
-private data class LibraryFile(
+internal data class LibraryFile(
     val playlists: List<Playlist> = emptyList(),
     val tracks: Map<String, Track> = emptyMap(),
     val currentPlaylistId: String? = null,
