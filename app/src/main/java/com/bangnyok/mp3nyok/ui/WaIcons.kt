@@ -1,6 +1,7 @@
 package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -85,5 +86,31 @@ object WaIcons {
     }.path(fill = ink) {
         moveTo(15f, 2.6f); lineTo(18.4f, 5f); lineTo(15f, 7.4f); close()
         moveTo(9f, 16.6f); lineTo(5.6f, 19f); lineTo(9f, 21.4f); close()
+    }.build()
+
+    val Gear: ImageVector = ImageVector.Builder(
+        name = "WaGear", defaultWidth = 24.dp, defaultHeight = 24.dp,
+        viewportWidth = 24f, viewportHeight = 24f
+    ).path(fill = ink, pathFillType = PathFillType.EvenOdd) {
+        // cincin luar
+        moveTo(18.2f, 12f)
+        arcToRelative(6.2f, 6.2f, 0f, true, false, -12.4f, 0f)
+        arcToRelative(6.2f, 6.2f, 0f, true, false, 12.4f, 0f)
+        close()
+        // lubang tengah
+        moveTo(15.4f, 12f)
+        arcToRelative(3.4f, 3.4f, 0f, true, false, -6.8f, 0f)
+        arcToRelative(3.4f, 3.4f, 0f, true, false, 6.8f, 0f)
+        close()
+    }.path(fill = ink) {
+        // gigi: 4 petak + 4 wajik pepenjuru
+        moveTo(10.8f, 3.4f); lineTo(13.2f, 3.4f); lineTo(13.2f, 7f); lineTo(10.8f, 7f); close()
+        moveTo(10.8f, 17f); lineTo(13.2f, 17f); lineTo(13.2f, 20.6f); lineTo(10.8f, 20.6f); close()
+        moveTo(3.4f, 10.8f); lineTo(7f, 10.8f); lineTo(7f, 13.2f); lineTo(3.4f, 13.2f); close()
+        moveTo(17f, 10.8f); lineTo(20.6f, 10.8f); lineTo(20.6f, 13.2f); lineTo(17f, 13.2f); close()
+        moveTo(16.9f, 5.7f); lineTo(18.3f, 7.1f); lineTo(16.9f, 8.5f); lineTo(15.5f, 7.1f); close()
+        moveTo(16.9f, 15.5f); lineTo(18.3f, 16.9f); lineTo(16.9f, 18.3f); lineTo(15.5f, 16.9f); close()
+        moveTo(7.1f, 15.5f); lineTo(8.5f, 16.9f); lineTo(7.1f, 18.3f); lineTo(5.7f, 16.9f); close()
+        moveTo(7.1f, 5.7f); lineTo(8.5f, 7.1f); lineTo(7.1f, 8.5f); lineTo(5.7f, 7.1f); close()
     }.build()
 }

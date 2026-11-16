@@ -41,7 +41,11 @@ import com.bangnyok.mp3nyok.update.Updater
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
+fun PlayerWindow(
+    modifier: Modifier = Modifier,
+    onUpdate: () -> Unit = {},
+    onSettings: () -> Unit = {}
+) {
     val isPlaying by PlayerHolder.isPlaying.collectAsState()
     val current by PlayerHolder.current.collectAsState()
     val isStream by PlayerHolder.isStream.collectAsState()
@@ -93,17 +97,23 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
         TitleBar(
             "MP3NYOK — YouTube Music Player",
             trailing = {
-                update?.let { u ->
-                    Text(
-                        "UPD ${u.version.removePrefix("v")} >",
-                        color = Wa.Orange,
-                        fontSize = 10.sp,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier
-                            .clickable { onUpdate() }
-                            .padding(start = 8.dp)
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    update?.let { u ->
+                        Text(
+                            "UPD ${u.version.removePrefix("v")} >",
+                            color = Wa.Orange,
+                            fontSize = 10.sp,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .clickable { onUpdate() }
+                                .padding(horizontal = 6.dp)
+                        )
+                    }
+                    WaIconButton(
+                        WaIcons.Gear,
+                        contentDescription = "Settings"
+                    ) { onSettings() }
                 }
             }
         )

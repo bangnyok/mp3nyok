@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +53,10 @@ fun MainScreen() {
             .background(Color.Black)
             .systemBarsPadding()
     ) {
-        PlayerWindow(onUpdate = { showUpdate = true })
+        PlayerWindow(
+            onUpdate = { showUpdate = true },
+            onSettings = { dialog = DialogKind.Settings }
+        )
         PlaylistWindow(
             onAddUrl = { dialog = DialogKind.AddUrl },
             onManage = { dialog = DialogKind.Manage },
@@ -81,6 +85,14 @@ private fun StatusBar(onClick: () -> Unit) {
     val folder by Store.musicFolder.collectAsState()
     val jobs by DLEngine.active.collectAsState()
     val ready by Mp3NyokApp.ytdlReady.collectAsState()
+    // Refresh status permission bila user balik dari skrin grant
+    var allAccess by remember { mutableStateOf(checkAllFilesAccess()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            kotlinx.coroutines.delay(1500)
+            allAccess = checkAllFilesAccess()
+        }
+    }
 
     val running = jobs.values.filter {
         it.state == DLEngine.State.QUEUED || it.state == DLEngine.State.RUNNING
@@ -96,6 +108,17 @@ private fun StatusBar(onClick: () -> Unit) {
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Column(Modifier.weight(1f)) {
+            if (!allAccess && android.os.Build.VERSION.SDK_INT >= 30) {
+                Text(
+                    "⚠ BERI PERMISSION FAIL DULU — tap sini → GRANT ALL FILES ACCESS",
+                    color = Wa.LedRed,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             Text(
                 if (!ready) "yt-dlp: initialising..." else folder,
                 color = Wa.TextDim,

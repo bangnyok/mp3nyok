@@ -38,6 +38,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Text
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.os.Build
+import android.os.Environment
 
 /** Palet warna klasik Winamp. */
 object Wa {
@@ -213,6 +215,10 @@ fun fmtTime(ms: Long): String {
     val s = ms / 1000
     return "%d:%02d".format(s / 60, s % 60)
 }
+
+/** true kalau "All files access" dah diberi (Android 11+), atau tidak perlu (Android 10-). */
+fun checkAllFilesAccess(): Boolean =
+    Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
 
 fun fmtDur(sec: Double?): String {
     if (sec == null || sec <= 0.0) return "--:--"

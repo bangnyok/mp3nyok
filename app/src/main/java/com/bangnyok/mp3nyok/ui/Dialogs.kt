@@ -20,6 +20,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -32,6 +33,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -55,6 +57,7 @@ import com.bangnyok.mp3nyok.data.NewTrack
 import com.bangnyok.mp3nyok.data.Store
 import com.bangnyok.mp3nyok.download.DLEngine
 import com.bangnyok.mp3nyok.update.Updater
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 // ------------------------------------------------------------------
@@ -604,7 +607,61 @@ fun SettingsDialog(onDismiss: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var allAccess by remember { mutableStateOf(checkAllFilesAccess()) }
 
+    // Semak semula permission bila balik dari skrin grant
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(1500)
+            allAccess = checkAllFilesAccess()
+        }
+    }
+
     WaDialog(title = "SETTINGS", onDismiss = onDismiss) {
+        // ---- NOTIS PERMISSION (paling atas) ----
+        if (Build.VERSION.SDK_INT >= 30 && !allAccess) {
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF3A2A00))
+                    .border(1.dp, Wa.Orange)
+                    .padding(8.dp)
+            ) {
+                Text(
+                    "⚠ PERMISSION DIPERLUKAN",
+                    color = Wa.Orange, fontSize = 12.sp,
+                    fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "Download akan GAGAL tanpa \"All files access\". " +
+                        "Tekan butang di bawah dulu, kemudian cuba download semula.",
+                    color = Wa.Text, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+                )
+                Spacer(Modifier.height(4.dp))
+                WaButton("GRANT ALL FILES ACCESS", Modifier.fillMaxWidth()) {
+                    try {
+                        ctx.startActivity(
+                            Intent(
+                                Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
+                                Uri.parse("package:${ctx.packageName}")
+                            )
+                        )
+                    } catch (_: Exception) {
+                        try {
+                            ctx.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
+                        } catch (_: Exception) {
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        } else {
+            Text(
+                "PERMISSION: OK (All files access diberi)",
+                color = Wa.Green, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+            )
+            Spacer(Modifier.height(6.dp))
+        }
+
         Text(
             "Folder MP3 (tempat simpan / senang cari):",
             color = Wa.TextDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace
@@ -629,29 +686,6 @@ fun SettingsDialog(onDismiss: () -> Unit) {
                 folder = Store.defaultMusicFolder()
                 Store.setFolder(folder)
                 msg = "folder disimpan: ${Store.musicFolder.value}"
-            }
-        }
-
-        if (Build.VERSION.SDK_INT >= 30 && !allAccess) {
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Untuk simpan ke folder awam (Music/...), beri \"All files access\":",
-                color = Wa.Orange, fontSize = 10.sp, fontFamily = FontFamily.Monospace
-            )
-            WaButton("GRANT ALL FILES ACCESS", Modifier.fillMaxWidth()) {
-                try {
-                    ctx.startActivity(
-                        Intent(
-                            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                            Uri.parse("package:${ctx.packageName}")
-                        )
-                    )
-                } catch (_: Exception) {
-                    try {
-                        ctx.startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
-                    } catch (_: Exception) {
-                    }
-                }
             }
         }
 
@@ -687,11 +721,27 @@ fun SettingsDialog(onDismiss: () -> Unit) {
             )
         }
         Spacer(Modifier.height(4.dp))
-        Text(
-            "UPDATE CHECK: " + if (BuildConfig.UPDATE_TOKEN.isBlank()) "OFF (token tiada)" else "ON",
-            color = if (BuildConfig.UPDATE_TOKEN.isBlank()) Wa.TextDim else Wa.Green,
-            fontSize = 10.sp, fontFamily = FontFamily.Monospace
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "UPDATE CHECK: " + if (BuildConfig.UPDATE_TOKEN.isBlank()) "OFF (token tiada)" else "ON",
+                color = if (BuildConfig.UPDATE_TOKEN.isBlank()) Wa.TextDim else Wa.Green,
+                fontSize = 10.sp, fontFamily = FontFamily.Monospace,
+                modifier = Modifier.weight(1f)
+            )
+            WaButton("CHECK UPDATE", enabled = !busy && BuildConfig.UPDATE_TOKEN.isNotBlank()) {
+                scope.launch {
+                    busy = true
+                    runCatching { Updater.check() }
+                    val u = Updater.updateInfo.value
+                    msg = when {
+                        BuildConfig.UPDATE_TOKEN.isBlank() -> "UPDATE CHECK OFF (no token)"
+                        u != null -> "Update ada: ${u.version} — tap notice UPD atas player"
+                        else -> "Tiada update baru (versi semasa ${BuildConfig.VERSION_NAME})"
+                    }
+                    busy = false
+                }
+            }
+        }
         Spacer(Modifier.height(4.dp))
         val hasCookies = remember { Store.findCookies() != null }
         Text(
@@ -710,6 +760,32 @@ fun SettingsDialog(onDismiss: () -> Unit) {
             "Nota: MP3 disimpan dengan best audio (diconvert oleh ffmpeg).",
             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
         )
+
+        // ---- FOOTER: copyright + link GitHub ----
+        Spacer(Modifier.height(10.dp))
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            Text(
+                "© 2026 Bang Nyok  •  ",
+                color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
+            )
+            Text(
+                "github.com/bangnyok/mp3nyok",
+                color = Wa.Green, fontSize = 10.sp, fontFamily = FontFamily.Monospace,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable {
+                    try {
+                        ctx.startActivity(
+                            Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/bangnyok/mp3nyok"))
+                        )
+                    } catch (_: Exception) {
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -793,9 +869,6 @@ fun UpdateDialog(onDismiss: () -> Unit) {
         }
     }
 }
-
-private fun checkAllFilesAccess(): Boolean =
-    Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
 
 // ------------------------------------------------------------------
 // RENAME TRACK — rename listing + fail MP3 di disk
