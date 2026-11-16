@@ -1,6 +1,7 @@
 package com.bangnyok.mp3nyok.ui
 
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
@@ -24,11 +25,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.bangnyok.mp3nyok.R
 import com.bangnyok.mp3nyok.data.Store
 import com.bangnyok.mp3nyok.player.PlayerHolder
 import com.bangnyok.mp3nyok.player.RepeatMode
@@ -57,12 +62,33 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
     var dragging by remember { mutableStateOf(false) }
     var sliderPos by remember { mutableStateOf(0f) }
 
-    Column(
+    Box(
         modifier
             .fillMaxWidth()
             .background(Wa.Bg)
-            .padding(horizontal = 10.dp, vertical = 8.dp)
     ) {
+        // Latar: wajah Bang Nyok (crop penuh, gelapkan supaya teks kekal jelas)
+        Image(
+            painter = painterResource(R.drawable.player_bg),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize()
+        )
+        Box(
+            Modifier
+                .matchParentSize()
+                .background(
+                    Brush.verticalGradient(
+                        0f to Color(0x99000000),
+                        1f to Color(0xE0000000)
+                    )
+                )
+        )
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
         TitleBar(
             "MP3NYOK — YouTube Music Player",
             trailing = {
@@ -255,4 +281,5 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
             }
         }
     }
+}
 }
