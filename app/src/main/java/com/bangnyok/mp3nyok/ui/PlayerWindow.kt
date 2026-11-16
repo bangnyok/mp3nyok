@@ -72,6 +72,7 @@ fun PlayerWindow(modifier: Modifier = Modifier, onUpdate: () -> Unit = {}) {
             painter = painterResource(R.drawable.player_bg),
             contentDescription = null,
             contentScale = ContentScale.Crop,
+            alignment = Alignment.TopCenter,
             modifier = Modifier.matchParentSize()
         )
         Box(
