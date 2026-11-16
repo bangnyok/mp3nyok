@@ -5,11 +5,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -20,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +51,49 @@ fun PlaylistWindow(
     val plTracks = playlist?.trackIds?.mapNotNull { tracks[it] } ?: emptyList()
 
     var selected by remember(playlist?.id) { mutableStateOf<Int?>(null) }
+    var errJob by remember { mutableStateOf<DLEngine.Job?>(null) }
+
+    errJob?.let { j ->
+        AlertDialog(
+            onDismissRequest = { errJob = null },
+            title = {
+                Text("DOWNLOAD ERROR", fontSize = 14.sp, fontFamily = FontFamily.Monospace)
+            },
+            text = {
+                Column {
+                    Text(
+                        j.title,
+                        color = Wa.Green, fontSize = 11.sp, fontFamily = FontFamily.Monospace,
+                        maxLines = 2, overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        j.error ?: "ralat tidak diketahui",
+                        color = Color(0xFFFF5050),
+                        fontSize = 11.sp,
+                        fontFamily = FontFamily.Monospace
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        "Tips: kalau error 'Sign in to confirm you're not a bot' — letak " +
+                            "cookies.txt di folder muzik. Kalau permission denied — buka FOLDER " +
+                            "dan beri All files access.",
+                        color = Wa.TextDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val t = tracks[j.trackId]
+                    if (t != null) DLEngine.enqueue(t)
+                    errJob = null
+                }) { Text("RETRY", color = Wa.Green) }
+            },
+            dismissButton = {
+                TextButton(onClick = { errJob = null }) { Text("CLOSE", color = Wa.TextDim) }
+            }
+        )
+    }
 
     Column(modifier = modifier) {
         TitleBar("MP3NYOK PLAYLIST  —  ${playlist?.name ?: "-"}")
@@ -166,7 +214,9 @@ private fun PlaylistRow(
                     "ERR",
                     color = Color(0xFFFF5050),
                     fontSize = 11.sp,
-                    fontFamily = FontFamily.Monospace
+                    fontFamily = FontFamily.Monospace,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable { errJob = job }
                 )
             track.filePath != null ->
                 Text(

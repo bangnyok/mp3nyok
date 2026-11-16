@@ -85,6 +85,7 @@ private fun StatusBar(onClick: () -> Unit) {
     val running = jobs.values.filter {
         it.state == DLEngine.State.QUEUED || it.state == DLEngine.State.RUNNING
     }
+    val failed = jobs.values.filter { it.state == DLEngine.State.FAILED }
     Row(
         Modifier
             .fillMaxWidth()
@@ -107,6 +108,16 @@ private fun StatusBar(onClick: () -> Unit) {
                 Text(
                     "DL ${it.progress.toInt()}%  ${it.title}",
                     color = Wa.Orange,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            failed.firstOrNull()?.let {
+                Text(
+                    "ERR: ${it.error ?: "-"}",
+                    color = Wa.LedRed,
                     fontSize = 10.sp,
                     fontFamily = FontFamily.Monospace,
                     maxLines = 1,
