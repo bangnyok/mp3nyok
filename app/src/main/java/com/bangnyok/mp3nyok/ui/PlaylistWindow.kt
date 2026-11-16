@@ -111,6 +111,7 @@ fun PlaylistWindow(
                     job = downloads[t.id],
                     selected = selected == i,
                     playing = playingTrack?.id == t.id,
+                    onErrClick = { errJob = it },
                     onClick = {
                         selected = i
                         PlayerHolder.playTrack(t, plTracks, i)
@@ -172,6 +173,7 @@ private fun PlaylistRow(
     job: DLEngine.Job?,
     selected: Boolean,
     playing: Boolean,
+    onErrClick: (DLEngine.Job) -> Unit,
     onClick: () -> Unit
 ) {
     val bg = if (selected) Wa.SelectBlue else Color.Transparent
@@ -216,7 +218,7 @@ private fun PlaylistRow(
                     fontSize = 11.sp,
                     fontFamily = FontFamily.Monospace,
                     textDecoration = TextDecoration.Underline,
-                    modifier = Modifier.clickable { errJob = job }
+                    modifier = Modifier.clickable { onErrClick(job) }
                 )
             track.filePath != null ->
                 Text(
