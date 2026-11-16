@@ -76,20 +76,20 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
     var entries by remember { mutableStateOf<List<DLEngine.UrlEntry>>(emptyList()) }
     val checked = remember { mutableStateMapOf<String, Boolean>() }
     val names = remember { mutableStateMapOf<String, String>() }
-    // APPEND (masuk hujung) atau GANTI (kosongkan list itu dulu, tanpa padam list lain)
+    // APPEND (tambah ke hujung) atau REPLACE (kosongkan list itu dulu, tanpa padam list lain)
     var mode by remember { mutableStateOf("APPEND") }
-    var gantiAsk by remember { mutableStateOf(false) }
+    var replaceAsk by remember { mutableStateOf(false) }
     var saveAsName by remember { mutableStateOf("") }
     var keepOld by remember { mutableStateOf(true) }
 
-    // Playlist sedia ada yang nama sama (untuk pilihan APPEND/GANTI)
+    // Playlist sedia ada yang nama sama (untuk pilihan APPEND/REPLACE)
     val existing = playlists.firstOrNull {
         it.name.equals(plName.trim(), ignoreCase = true) && plName.isNotBlank()
     }
 
     WaDialog(title = "ADD URL — YOUTUBE / YT MUSIC", onDismiss = onDismiss) {
         Text(
-            "Paste link (video atau playlist):",
+            "Paste link (video or playlist):",
             color = Wa.TextDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace
         )
         Row(
@@ -126,7 +126,7 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                             names[e.id] = Store.sanitizeFileName(e.title)
                         }
                     } catch (e: Exception) {
-                        error = e.message ?: "gagal fetch"
+                        error = e.message ?: "fetch failed"
                     }
                     busy = false
                 }
@@ -157,7 +157,7 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
         if (entries.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "NAMA PLAYLIST:",
+                "PLAYLIST NAME:",
                 color = Wa.TextDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace
             )
             TextField(
@@ -171,10 +171,10 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(4.dp))
-            // Playlist nama sama sudah wujud? Tanya APPEND atau GANTI
+            // Playlist nama sama sudah wujud? Tanya APPEND atau REPLACE
             if (existing != null) {
                 Text(
-                    "Playlist \"${existing.name}\" sudah ada (${existing.trackIds.size} tracks):",
+                    "Playlist \"${existing.name}\" already exists (${existing.trackIds.size} tracks):",
                     color = Wa.Orange, fontSize = 10.sp, fontFamily = FontFamily.Monospace
                 )
                 Spacer(Modifier.height(2.dp))
@@ -185,21 +185,21 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                         active = mode == "APPEND"
                     ) { mode = "APPEND" }
                     WaButton(
-                        "GANTI",
+                        "REPLACE",
                         Modifier.weight(1f),
-                        active = mode == "GANTI"
-                    ) { mode = "GANTI" }
+                        active = mode == "REPLACE"
+                    ) { mode = "REPLACE" }
                 }
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    if (mode == "APPEND") "Tracks baru dicampur ke hujung list itu."
-                    else "List itu dikosongkan dulu (list lain tidak disentuh).",
+                    if (mode == "APPEND") "New tracks are added to the end of that list."
+                    else "That list will be cleared first (other saved lists are untouched).",
                     color = Wa.TextDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace
                 )
                 Spacer(Modifier.height(2.dp))
             }
             Text(
-                "${checked.count { it.value }} / ${entries.size} dipilih — edit nama fail:",
+                "${checked.count { it.value }} / ${entries.size} selected — edit file names:",
                 color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
             )
             LazyColumn(
@@ -256,16 +256,16 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                     val sel = entries.filter { checked[it.id] ?: true }
                     val mapped = sel.map { NewTrack(it.title, it.watchUrl, it.id, it.durationSec) }
                     val targetName = plName.ifBlank { "Playlist" }
-                    if (mode == "GANTI" && existing != null && existing.trackIds.isNotEmpty()) {
+                    if (mode == "REPLACE" && existing != null && existing.trackIds.isNotEmpty()) {
                         // List itu ada isi — tanya dulu: simpan salinan senarai lama?
-                        saveAsName = "${existing.name} lama"
+                        saveAsName = "${existing.name} old"
                         keepOld = true
-                        gantiAsk = true
-                    } else if (mode == "GANTI" && existing != null) {
+                        replaceAsk = true
+                    } else if (mode == "REPLACE" && existing != null) {
                         Store.replacePlaylistTracks(existing.id, mapped)
                         Toast.makeText(
                             ctx,
-                            "\"${existing.name}\" diganti — ${sel.size} listing",
+                            "\"${existing.name}\" replaced — ${sel.size} tracks",
                             Toast.LENGTH_SHORT
                         ).show()
                         onDismiss()
@@ -273,7 +273,7 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                         Store.addTracks(targetName, mapped)
                         Toast.makeText(
                             ctx,
-                            "${sel.size} listing ditambah ke \"$targetName\"",
+                            "${sel.size} tracks added to \"$targetName\"",
                             Toast.LENGTH_SHORT
                         ).show()
                         onDismiss()
@@ -284,22 +284,22 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
         }
     }
 
-    // Sub-dialog: GANTI list yang ada isi — simpan salinan dulu?
-    if (gantiAsk) {
+    // Sub-dialog: REPLACE list yang ada isi — simpan salinan dulu?
+    if (replaceAsk) {
         val ex = existing
         AlertDialog(
-            onDismissRequest = { gantiAsk = false },
+            onDismissRequest = { replaceAsk = false },
             title = {
                 Text(
-                    "GANTI LIST \"${ex?.name ?: ""}\"",
+                    "REPLACE LIST \"${ex?.name ?: ""}\"",
                     fontSize = 14.sp, fontFamily = FontFamily.Monospace
                 )
             },
             text = {
                 Column {
                     Text(
-                        "List itu ada ${ex?.trackIds?.size ?: 0} tracks. " +
-                            "Simpan salinan senarai semasa dulu?",
+                        "That list has ${ex?.trackIds?.size ?: 0} tracks. " +
+                            "Save a copy of the current list first?",
                         fontSize = 12.sp, fontFamily = FontFamily.Monospace
                     )
                     Spacer(Modifier.height(6.dp))
@@ -326,7 +326,7 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                             )
                         )
                         Text(
-                            "Simpan salinan sebagai playlist baru",
+                            "Save a copy as a new playlist",
                             fontSize = 10.sp, fontFamily = FontFamily.Monospace, color = Wa.TextDim
                         )
                     }
@@ -343,18 +343,18 @@ fun AddUrlDialog(onDismiss: () -> Unit) {
                     Store.replacePlaylistTracks(exx.id, mapped)
                     Toast.makeText(
                         ctx,
-                        "\"${exx.name}\" diganti — ${sel.size} listing" +
-                            if (keepOld && saveAsName.isNotBlank()) " (salinan: \"$saveAsName\")" else "",
+                        "\"${exx.name}\" replaced — ${sel.size} tracks" +
+                            if (keepOld && saveAsName.isNotBlank()) " (copy: \"$saveAsName\")" else "",
                         Toast.LENGTH_SHORT
                     ).show()
-                    gantiAsk = false
+                    replaceAsk = false
                     onDismiss()
                 }) {
-                    Text("GANTI", color = Wa.Green)
+                    Text("REPLACE", color = Wa.Green)
                 }
             },
             dismissButton = {
-                TextButton(onClick = { gantiAsk = false }) {
+                TextButton(onClick = { replaceAsk = false }) {
                     Text("CANCEL", color = Wa.TextDim)
                 }
             }
@@ -374,6 +374,7 @@ private sealed interface MgrSub {
 
 @Composable
 fun PlaylistManagerDialog(onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
     val playlists by Store.playlists.collectAsState()
     val currentId by Store.currentPlaylistId.collectAsState()
     var selId by remember { mutableStateOf(playlists.firstOrNull()?.id) }
@@ -423,7 +424,15 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                 sub = MgrSub.SaveAs
             }
             WaButton("OPEN", Modifier.weight(1f), enabled = selId != null) {
-                selId?.let { Store.setCurrent(it) }
+                selId?.let { pid ->
+                    Store.setCurrent(pid)
+                    Toast.makeText(
+                        ctx,
+                        "Opened: ${playlists.firstOrNull { it.id == pid }?.name ?: ""}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    onDismiss()
+                }
             }
             WaButton("RENAME", Modifier.weight(1.2f), enabled = selId != null) {
                 selId?.let { pid ->
@@ -437,7 +446,7 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
         }
         Spacer(Modifier.height(6.dp))
         Text(
-            "SAVE AS: simpan playlist semasa sebagai nama baru, ATAU merge kandungannya ke playlist lain.",
+            "SAVE AS: save the current playlist under a new name, OR merge its tracks into another playlist.",
             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
         )
 
@@ -485,7 +494,7 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                     val others = playlists.filter { it.id != cur?.id }
                     WaDialog(title = "SAVE AS — ${cur?.name ?: ""}", onDismiss = { sub = null }) {
                         Text(
-                            "1) Simpan sebagai nama baru:",
+                            "1) Save as a new playlist:",
                             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
                         )
                         Spacer(Modifier.height(2.dp))
@@ -505,7 +514,7 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                         }
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            "2) ATAU merge ke playlist sedia ada:",
+                            "2) OR merge into an existing playlist:",
                             color = Wa.TextDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace
                         )
                         LazyColumn(
@@ -536,7 +545,7 @@ fun PlaylistManagerDialog(onDismiss: () -> Unit) {
                         Spacer(Modifier.height(6.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             WaButton(
-                                "MERGE KE PILIHAN",
+                                "MERGE TO SELECTED",
                                 Modifier.weight(2f),
                                 enabled = saveTarget != null
                             ) {
