@@ -1,0 +1,122 @@
+package com.mrras.wamp3.ui
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.mrras.wamp3.Wamp3App
+import com.mrras.wamp3.data.Store
+import com.mrras.wamp3.download.DLEngine
+
+private sealed interface DialogKind {
+    data object AddUrl : DialogKind
+    data object Manage : DialogKind
+    data object Settings : DialogKind
+    data class Rename(val trackId: String) : DialogKind
+}
+
+@Composable
+fun MainScreen() {
+    var dialog by remember { mutableStateOf<DialogKind?>(null) }
+
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .systemBarsPadding()
+    ) {
+        PlayerWindow()
+        PlaylistWindow(
+            onAddUrl = { dialog = DialogKind.AddUrl },
+            onManage = { dialog = DialogKind.Manage },
+            onSettings = { dialog = DialogKind.Settings },
+            onRenameTrack = { dialog = DialogKind.Rename(it) },
+            modifier = Modifier.weight(1f)
+        )
+        StatusBar(onClick = { dialog = DialogKind.Settings })
+    }
+
+    when (val d = dialog) {
+        is DialogKind.AddUrl -> AddUrlDialog { dialog = null }
+        is DialogKind.Manage -> PlaylistManagerDialog { dialog = null }
+        is DialogKind.Settings -> SettingsDialog { dialog = null }
+        is DialogKind.Rename -> RenameDialog(d.trackId) { dialog = null }
+        null -> {}
+    }
+}
+
+@Composable
+private fun StatusBar(onClick: () -> Unit) {
+    val folder by Store.musicFolder.collectAsState()
+    val jobs by DLEngine.active.collectAsState()
+    val ready by Wamp3App.ytdlReady.collectAsState()
+
+    val running = jobs.values.filter {
+        it.state == DLEngine.State.QUEUED || it.state == DLEngine.State.RUNNING
+    }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(Wa.BgDark)
+            .clickable { onClick() }
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                if (!ready) "yt-dlp: initialising..." else folder,
+                color = Wa.TextDim,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            running.firstOrNull()?.let {
+                Text(
+                    "DL ${it.progress.toInt()}%  ${it.title}",
+                    color = Wa.Orange,
+                    fontSize = 10.sp,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+        if (running.isNotEmpty()) {
+            LinearProgressIndicator(
+                progress = { (running.firstOrNull()?.progress ?: 0f) / 100f },
+                color = Wa.Green,
+                trackColor = Color(0xFF333333),
+                modifier = Modifier.width(60.dp)
+            )
+        }
+        Text(
+            "${running.size} DL",
+            color = Wa.Green,
+            fontSize = 11.sp,
+            fontFamily = FontFamily.Monospace
+        )
+    }
+}
