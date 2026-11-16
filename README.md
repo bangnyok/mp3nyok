@@ -1,4 +1,4 @@
-# Wamp3 — YouTube / YT Music to MP3 (Winamp-style Player)
+# Wamp3 (mp3nyok) — YouTube / YT Music to MP3 (Winamp-style Player)
 
 Native Android app (Kotlin + Jetpack Compose) untuk download muzik dari
 YouTube / YouTube Music, convert ke **MP3**, dan play dengan interface

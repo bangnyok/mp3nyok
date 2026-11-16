@@ -28,7 +28,7 @@ import java.net.URL
  */
 object Updater {
 
-    const val REPO_API = "https://api.github.com/repos/rashidzainol/wamp3/releases/latest"
+    const val REPO_API = "https://api.github.com/repos/bangnyok/mp3nyok/releases/latest"
 
     data class Release(
         val version: String,   // contoh "v1.0.2"
@@ -97,7 +97,7 @@ object Updater {
         val out = File(dir, "wamp3-update.apk")
         downloadProgress.value = 0f
 
-        val url = "https://api.github.com/repos/rashidzainol/wamp3/releases/assets/${rel.assetId}"
+        val url = "https://api.github.com/repos/bangnyok/mp3nyok/releases/assets/${rel.assetId}"
 
         fun open(u: String, withAuth: Boolean): HttpURLConnection {
             val c = URL(u).openConnection() as HttpURLConnection
