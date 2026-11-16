@@ -1,8 +1,17 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+}
+
+// Signing key (keystore.properties dijana oleh workflow "bootstrap signing")
+val keystoreProps = Properties()
+val keystorePropsFile = rootProject.file("keystore.properties")
+if (keystorePropsFile.exists()) {
+    keystorePropsFile.inputStream().use { keystoreProps.load(it) }
 }
 
 android {
@@ -13,18 +22,36 @@ android {
         applicationId = "com.mrras.wamp3"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        // versionName ikut git tag (v1.2.3 -> "1.2.3"); versionCode naik ikut CI run
+        versionName = (System.getenv("GITHUB_REF_NAME") ?: "1.0").removePrefix("v")
+        versionCode = System.getenv("GITHUB_RUN_NUMBER")?.toInt() ?: 1
 
         // youtubedl-android ships python + ffmpeg for all ABIs (~150MB APK).
         // Uncomment to shrink the APK to specific devices:
         // ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a") }
     }
 
+    signingConfigs {
+        create("release") {
+            if (keystorePropsFile.exists()) {
+                storeFile = rootProject.file(keystoreProps["storeFile"] as String)
+                storePassword = keystoreProps["storePassword"] as String
+                keyAlias = keystoreProps["keyAlias"] as String
+                keyPassword = keystoreProps["keyPassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Kalau keystore belum di-bootstrap, guna debug signing supaya build tetap jalan
+            signingConfig = if (keystorePropsFile.exists()) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 

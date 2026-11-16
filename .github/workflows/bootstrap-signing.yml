@@ -1,0 +1,52 @@
+name: Bootstrap signing key
+
+# Jalankan SEKALI (Actions tab -> Bootstrap signing key -> Run workflow).
+# Ia jana keystore release + keystore.properties dan commit balik ke repo.
+# Selepas itu, semua release build pakai key yang sama (APK boleh update-over-install).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Generate keystore (skip jika sudah wujud)
+        run: |
+          if [ -f wamp3.keystore ] && [ -f keystore.properties ]; then
+            echo "Keystore sudah wujud - tiada apa-apa perlu dibuat."
+            exit 0
+          fi
+          PASS=$(openssl rand -hex 16)
+          keytool -genkeypair -v \
+            -keystore wamp3.keystore \
+            -alias wamp3 \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass "$PASS" -keypass "$PASS" \
+            -dname "CN=Wamp3, OU=Personal, O=RashidZainol, L=KL, S=KL, C=MY"
+          cat > keystore.properties <<EOF
+          storeFile=wamp3.keystore
+          storePassword=$PASS
+          keyAlias=wamp3
+          keyPassword=$PASS
+          EOF
+          # Buang indent heredoc
+          sed -i 's/^          //' keystore.properties
+          echo "Keystore dijana."
+
+      - name: Commit keystore ke repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add wamp3.keystore keystore.properties
+          if git diff --cached --quiet; then
+            echo "Tiada perubahan untuk di-commit."
+          else
+            git commit -m "Add release signing keystore [skip ci]"
+            git push
+          fi
